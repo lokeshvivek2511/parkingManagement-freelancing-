@@ -1,0 +1,103 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>2-Wheeler Parking Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6>Available: {{ two_wheeler_available }} / {{ two_wheeler_slots|length }}</h6>
+                    <a href="{{ url_for('add_vehicle_page') }}" class="btn btn-primary btn-sm">Add Vehicle</a>
+                </div>
+                <div class="parking-grid">
+                    {% for slot in two_wheeler_slots %}
+                        <div class="slot {% if slot.occupied %}slot-occupied{% else %}slot-available{% endif %}" 
+                            data-slot-id="{{ slot.slot_id }}" 
+                            {% if not slot.occupied %}onclick="window.location.href='{{ url_for('add_vehicle_page') }}?slot_id={{ slot.slot_id }}'"{% endif %}>
+                            {{ slot.slot_id }}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>4-Wheeler Parking Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6>Available: {{ four_wheeler_available }} / {{ four_wheeler_slots|length }}</h6>
+                    <a href="{{ url_for('add_vehicle_page') }}" class="btn btn-primary btn-sm">Add Vehicle</a>
+                </div>
+                <div class="parking-grid">
+                    {% for slot in four_wheeler_slots %}
+                        <div class="slot {% if slot.occupied %}slot-occupied{% else %}slot-available{% endif %}" 
+                            data-slot-id="{{ slot.slot_id }}" 
+                            {% if not slot.occupied %}onclick="window.location.href='{{ url_for('add_vehicle_page') }}?slot_id={{ slot.slot_id }}'"{% endif %}>
+                            {{ slot.slot_id }}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Quick Links</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="{{ url_for('add_vehicle_page') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-plus-circle"></i> Add New Vehicle
+                    </a>
+                    <a href="{{ url_for('manage_vehicles') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-car"></i> Manage Parked Vehicles
+                    </a>
+                    <a href="{{ url_for('parking_history') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-history"></i> View Parking History
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Parking Rates</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Vehicle Type</th>
+                            <th>Rate (per hour)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Two Wheeler</td>
+                            <td>₹30</td>
+                        </tr>
+                        <tr>
+                            <td>Four Wheeler</td>
+                            <td>₹60</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="text-muted small">* Rates are calculated per hour, any partial hour is rounded up.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

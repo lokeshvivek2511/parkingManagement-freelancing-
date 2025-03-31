@@ -1,0 +1,240 @@
+{% extends "layout.html" %}
+
+{% block title %}Parking History{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5>Parking History</h5>
+    </div>
+    <div class="card-body">
+        {% if history %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Owner</th>
+                            <th>Vehicle Number</th>
+                            <th>Vehicle Type</th>
+                            <th>Slot</th>
+                            <th>Entry Time</th>
+                            <th>Exit Time</th>
+                            <th>Duration</th>
+                            <th>Payment</th>
+                            <th>Payment Method</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in history %}
+                            <tr>
+                                <td>{{ record.name }}</td>
+                                <td>{{ record.vehicle_number }}</td>
+                                <td>{{ "Two Wheeler" if record.vehicle_type == "2W" else "Four Wheeler" }}</td>
+                                <td>{{ record.slot_id }}</td>
+                                <td>{{ record.entry_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ record.exit_time.strftime('%Y-%m-%d %H:%M') if record.exit_time else 'N/A' }}</td>
+                                <td>{{ record.duration_hours }} hour{{ 's' if record.duration_hours != 1 else '' }}</td>
+                                <td>₹{{ record.payment }}</td>
+                                <td>
+                                    {% if record.payment_method == 'cash' %}
+                                        <span class="badge bg-primary">Cash</span>
+                                    {% elif record.payment_method == 'qr_code' %}
+                                        <span class="badge bg-success">QR Code</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">N/A</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item {{ 'disabled' if page == 1 else '' }}">
+                        <a class="page-link" href="{{ url_for('parking_history', page=page-1) if page > 1 else '#' }}">Previous</a>
+                    </li>
+                    
+                    {% for p in range(1, total_pages + 1) %}
+                        <li class="page-item {{ 'active' if p == page else '' }}">
+                            <a class="page-link" href="{{ url_for('parking_history', page=p) }}">{{ p }}</a>
+                        </li>
+                    {% endfor %}
+                    
+                    <li class="page-item {{ 'disabled' if page == total_pages else '' }}">
+                        <a class="page-link" href="{{ url_for('parking_history', page=page+1) if page < total_pages else '#' }}">Next</a>
+                    </li>
+                </ul>
+            </nav>
+        {% else %}
+            <div class="alert alert-info">
+                No parking history available yet.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Analytics Section -->
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Revenue Analytics</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="revenueChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Vehicle Type Distribution</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="vehicleTypeChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Payment Methods</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="paymentMethodChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Calculate analytics data from history
+        const history = [
+            {% for record in history %}
+                {
+                    vehicleType: "{{ record.vehicle_type }}",
+                    duration: {{ record.duration_hours }},
+                    payment: {{ record.payment }},
+                    exitTime: "{{ record.exit_time.strftime('%Y-%m-%d') if record.exit_time else '' }}",
+                    paymentMethod: "{{ record.payment_method if record.payment_method else 'unknown' }}"
+                },
+            {% endfor %}
+        ];
+        
+        // Calculate revenue by day
+        const revenueByDay = {};
+        history.forEach(record => {
+            if (record.exitTime) {
+                if (!revenueByDay[record.exitTime]) {
+                    revenueByDay[record.exitTime] = 0;
+                }
+                revenueByDay[record.exitTime] += record.payment;
+            }
+        });
+        
+        // Sort days
+        const sortedDays = Object.keys(revenueByDay).sort();
+        
+        // Create revenue chart
+        const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+        new Chart(revenueCtx, {
+            type: 'bar',
+            data: {
+                labels: sortedDays,
+                datasets: [{
+                    label: 'Daily Revenue (₹)',
+                    data: sortedDays.map(day => revenueByDay[day]),
+                    backgroundColor: 'rgba(247, 148, 29, 0.7)',
+                    borderColor: 'rgba(247, 148, 29, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        
+        // Count vehicle types
+        let twoWheelers = 0;
+        let fourWheelers = 0;
+        
+        history.forEach(record => {
+            if (record.vehicleType === '2W') {
+                twoWheelers++;
+            } else {
+                fourWheelers++;
+            }
+        });
+        
+        // Create vehicle type chart
+        const vehicleTypeCtx = document.getElementById('vehicleTypeChart').getContext('2d');
+        new Chart(vehicleTypeCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Two Wheelers', 'Four Wheelers'],
+                datasets: [{
+                    data: [twoWheelers, fourWheelers],
+                    backgroundColor: [
+                        'rgba(140, 198, 63, 0.7)',
+                        'rgba(94, 37, 144, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(140, 198, 63, 1)',
+                        'rgba(94, 37, 144, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            }
+        });
+        
+        // Count payment methods
+        let cashPayments = 0;
+        let qrCodePayments = 0;
+        let otherPayments = 0;
+        
+        history.forEach(record => {
+            if (record.paymentMethod === 'cash') {
+                cashPayments++;
+            } else if (record.paymentMethod === 'qr_code') {
+                qrCodePayments++;
+            } else {
+                otherPayments++;
+            }
+        });
+        
+        // Create payment method chart
+        const paymentMethodCtx = document.getElementById('paymentMethodChart').getContext('2d');
+        new Chart(paymentMethodCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Cash', 'QR Code', 'Other/Unknown'],
+                datasets: [{
+                    data: [cashPayments, qrCodePayments, otherPayments],
+                    backgroundColor: [
+                        'rgba(247, 148, 29, 0.7)',
+                        'rgba(140, 198, 63, 0.7)',
+                        'rgba(204, 204, 204, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(247, 148, 29, 1)',
+                        'rgba(140, 198, 63, 1)',
+                        'rgba(204, 204, 204, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            }
+        });
+    });
+</script>
+{% endblock %}

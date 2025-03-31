@@ -1,0 +1,110 @@
+{% extends "layout.html" %}
+
+{% block title %}Process Payment{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5>Payment for Vehicle Exit</h5>
+    </div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h6>Vehicle Details</h6>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Owner:</th>
+                                <td>{{ vehicle.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Vehicle Number:</th>
+                                <td>{{ vehicle.vehicle_number }}</td>
+                            </tr>
+                            <tr>
+                                <th>Vehicle Type:</th>
+                                <td>{{ "Two Wheeler" if vehicle.vehicle_type == "2W" else "Four Wheeler" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Slot:</th>
+                                <td>{{ vehicle.slot_id }}</td>
+                            </tr>
+                            <tr>
+                                <th>Entry Time:</th>
+                                <td>{{ vehicle.entry_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                            </tr>
+                            <tr>
+                                <th>Parking Duration:</th>
+                                <td>{{ hours }} hour(s)</td>
+                            </tr>
+                            <tr>
+                                <th>Total Amount:</th>
+                                <td class="text-danger font-weight-bold">₹{{ payment }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h6>Select Payment Method</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 text-center mb-3">
+                                <button onclick="processPayment('cash')" class="btn btn-outline-primary btn-block p-3">
+                                    <i class="fas fa-money-bill-wave fa-2x mb-2"></i><br>
+                                    Pay with Cash
+                                </button>
+                            </div>
+                            <div class="col-md-6 text-center mb-3">
+                                <button onclick="showQrCode()" class="btn btn-outline-success btn-block p-3">
+                                    <i class="fas fa-qrcode fa-2x mb-2"></i><br>
+                                    Pay with QR Code
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- QR Code Modal -->
+                        <div id="qrCodeSection" class="mt-4 text-center" style="display: none;">
+                            <div class="alert alert-info">
+                                <p>Scan the QR code below to make payment</p>
+                            </div>
+                            <img src="/static/images/qr_code.png" alt="Payment QR Code" class="img-fluid mb-3" style="max-width: 250px;">
+                            <div>
+                                <button onclick="processPayment('qr_code')" class="btn btn-success">
+                                    Payment Confirmed
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-3">
+            <a href="{{ url_for('manage_vehicles') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Vehicles
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function showQrCode() {
+        document.getElementById('qrCodeSection').style.display = 'block';
+    }
+    
+    function processPayment(method) {
+        if (confirm('Confirm payment via ' + (method === 'cash' ? 'cash' : 'QR code') + '?')) {
+            window.location.href = "{{ url_for('complete_exit', vehicle_id=vehicle.vehicle_id) }}?method=" + method;
+        }
+    }
+</script>
+{% endblock %}

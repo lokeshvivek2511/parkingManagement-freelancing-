@@ -1,0 +1,228 @@
+{% extends "layout.html" %}
+
+{% block title %}Add Vehicle{% endblock %}
+
+{% block additional_head %}
+<style>
+    .slot-selection {
+        display: none;
+    }
+    .slot-option {
+        padding: 10px;
+        margin: 5px;
+        background-color: var(--secondary-color);
+        color: white;
+        border-radius: 5px;
+        text-align: center;
+        cursor: pointer;
+    }
+    .slot-option:hover {
+        background-color: var(--primary-color);
+    }
+    .slot-option.selected {
+        background-color: var(--accent-color);
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h5>Add New Vehicle</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="name" class="form-label">Owner Name</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="mobile" class="form-label">Mobile Number</label>
+                            <input type="tel" class="form-control" id="mobile" name="mobile" pattern="[0-9]{10}" title="Please enter a 10-digit mobile number" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="vehicle_number" class="form-label">Vehicle Number</label>
+                            <input type="text" class="form-control" id="vehicle_number" name="vehicle_number" 
+                                   pattern="^TN\d{2}[A-Z]{2}\d{4}$" 
+                                   title="Please enter a valid TN vehicle number (e.g., TN05XS0987)" 
+                                   required>
+                            <div class="form-text">Format: e.g., TN05XS0987</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="vehicle_type" class="form-label">Vehicle Type</label>
+                            <select class="form-select" id="vehicle_type" name="vehicle_type" required>
+                                <option value="" selected disabled>Select vehicle type</option>
+                                <option value="2W">Two Wheeler</option>
+                                <option value="4W">Four Wheeler</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="slot_id" class="form-label">Parking Slot</label>
+                        <select class="form-select" id="slot_id" name="slot_id" required>
+                            <option value="" selected disabled>Select vehicle type first</option>
+                            <!-- Slots will be populated by JavaScript -->
+                        </select>
+                        <div class="form-text">You can also click on one of the slot boxes below to select it</div>
+                    </div>
+                    
+                    <div id="two-wheeler-slots" class="slot-selection mb-3">
+                        <label class="form-label">Available Two-Wheeler Slots</label>
+                        <div class="row">
+                            {% if two_wheeler_slots %}
+                                {% for slot_id in two_wheeler_slots %}
+                                    <div class="col-2">
+                                        <div class="slot-option" data-slot-id="{{ slot_id }}">
+                                            {{ slot_id }}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="col-12">
+                                    <div class="alert alert-warning">No two-wheeler slots available</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div id="four-wheeler-slots" class="slot-selection mb-3">
+                        <label class="form-label">Available Four-Wheeler Slots</label>
+                        <div class="row">
+                            {% if four_wheeler_slots %}
+                                {% for slot_id in four_wheeler_slots %}
+                                    <div class="col-2">
+                                        <div class="slot-option" data-slot-id="{{ slot_id }}">
+                                            {{ slot_id }}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="col-12">
+                                    <div class="alert alert-warning">No four-wheeler slots available</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Add Vehicle</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("DOM loaded - initializing add vehicle page");
+        const vehicleTypeSelect = document.getElementById('vehicle_type');
+        const slotSelect = document.getElementById('slot_id');
+        const twoWheelerSlotsDiv = document.getElementById('two-wheeler-slots');
+        const fourWheelerSlotsDiv = document.getElementById('four-wheeler-slots');
+        
+        // Slot data from server - explicitly define all available slots
+        const twoWheelerSlots = [
+            {% for slot_id in two_wheeler_slots %}
+                "{{ slot_id }}",
+            {% endfor %}
+        ];
+        
+        const fourWheelerSlots = [
+            {% for slot_id in four_wheeler_slots %}
+                "{{ slot_id }}",
+            {% endfor %}
+        ];
+        
+        console.log("2W slots:", twoWheelerSlots);
+        console.log("4W slots:", fourWheelerSlots);
+        
+        // Get slot_id from URL if present
+        const urlParams = new URLSearchParams(window.location.search);
+        const slotIdParam = urlParams.get('slot_id');
+        
+        // Function to populate dropdown with slots
+        function populateSlotDropdown(slots) {
+            // Clear existing options (except the default)
+            slotSelect.innerHTML = '<option value="" selected disabled>Select a parking slot</option>';
+            
+            // Add slot options
+            slots.forEach(slotId => {
+                const option = document.createElement('option');
+                option.value = slotId;
+                option.textContent = slotId;
+                slotSelect.appendChild(option);
+            });
+        }
+        
+        // Handle change in vehicle type
+        vehicleTypeSelect.addEventListener('change', function() {
+            console.log("Vehicle type changed to:", this.value);
+            const vehicleType = this.value;
+            
+            // Hide both slot selection divs
+            twoWheelerSlotsDiv.style.display = 'none';
+            fourWheelerSlotsDiv.style.display = 'none';
+            
+            // Show appropriate slot selection based on vehicle type
+            if (vehicleType === '2W') {
+                twoWheelerSlotsDiv.style.display = 'block';
+                populateSlotDropdown(twoWheelerSlots);
+                
+                // Set slot if it was in the URL and matches type
+                if (slotIdParam && slotIdParam.startsWith('2W')) {
+                    slotSelect.value = slotIdParam;
+                }
+            } else if (vehicleType === '4W') {
+                fourWheelerSlotsDiv.style.display = 'block';
+                populateSlotDropdown(fourWheelerSlots);
+                
+                // Set slot if it was in the URL and matches type
+                if (slotIdParam && slotIdParam.startsWith('4W')) {
+                    slotSelect.value = slotIdParam;
+                }
+            }
+        });
+        
+        // Handle slot option clicks
+        const slotOptions = document.querySelectorAll('.slot-option');
+        slotOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                const slotId = this.getAttribute('data-slot-id');
+                console.log("Slot clicked:", slotId);
+                
+                // Update the dropdown
+                slotSelect.value = slotId;
+                
+                // Update visual selection
+                slotOptions.forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+            });
+        });
+        
+        // If slot_id is in URL, set vehicle type and slot accordingly
+        if (slotIdParam) {
+            console.log("URL has slot parameter:", slotIdParam);
+            if (slotIdParam.startsWith('2W')) {
+                vehicleTypeSelect.value = '2W';
+                // Trigger change event to update UI
+                vehicleTypeSelect.dispatchEvent(new Event('change'));
+            } else if (slotIdParam.startsWith('4W')) {
+                vehicleTypeSelect.value = '4W';
+                // Trigger change event to update UI
+                vehicleTypeSelect.dispatchEvent(new Event('change'));
+            }
+        }
+    });
+</script>
+{% endblock %}

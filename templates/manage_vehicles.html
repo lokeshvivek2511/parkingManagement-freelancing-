@@ -1,0 +1,82 @@
+{% extends "layout.html" %}
+
+{% block title %}Manage Vehicles{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5>Currently Parked Vehicles</h5>
+        <a href="{{ url_for('add_vehicle_page') }}" class="btn btn-primary btn-sm">Add New Vehicle</a>
+    </div>
+    <div class="card-body">
+        {% if vehicles %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Owner</th>
+                            <th>Vehicle Number</th>
+                            <th>Vehicle Type</th>
+                            <th>Slot</th>
+                            <th>Entry Time</th>
+                            <th>Duration</th>
+                            <th>Estimated Fee</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vehicle in vehicles %}
+                            <tr>
+                                <td>{{ vehicle.name }}</td>
+                                <td>{{ vehicle.vehicle_number }}</td>
+                                <td>{{ "Two Wheeler" if vehicle.vehicle_type == "2W" else "Four Wheeler" }}</td>
+                                <td>{{ vehicle.slot_id }}</td>
+                                <td>{{ vehicle.entry_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td id="duration-{{ vehicle.vehicle_id }}">Loading...</td>
+                                <td id="fee-{{ vehicle.vehicle_id }}">Loading...</td>
+                                <td>
+                                    <a href="{{ url_for('process_exit', vehicle_id=vehicle.vehicle_id) }}" 
+                                       class="btn btn-warning btn-sm"
+                                       onclick="return confirm('Process exit for vehicle {{ vehicle.vehicle_number }}?')">
+                                        Process Exit
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                No vehicles currently parked. <a href="{{ url_for('add_vehicle_page') }}">Add a vehicle</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Calculate durations and fees
+        {% for vehicle in vehicles %}
+            const entryTime{{ loop.index }} = new Date('{{ vehicle.entry_time.isoformat() }}');
+            const now{{ loop.index }} = new Date();
+            const durationHours{{ loop.index }} = Math.ceil((now{{ loop.index }} - entryTime{{ loop.index }}) / (1000 * 60 * 60));
+            
+            document.getElementById('duration-{{ vehicle.vehicle_id }}').textContent = 
+                durationHours{{ loop.index }} + ' hour' + (durationHours{{ loop.index }} === 1 ? '' : 's');
+            
+            const hourlyRate{{ loop.index }} = {{ 30 if vehicle.vehicle_type == "2W" else 60 }};
+            const fee{{ loop.index }} = durationHours{{ loop.index }} * hourlyRate{{ loop.index }};
+            
+            document.getElementById('fee-{{ vehicle.vehicle_id }}').textContent = '₹' + fee{{ loop.index }};
+        {% endfor %}
+        
+        // Refresh the page every minute to update durations and fees
+        setTimeout(function() {
+            window.location.reload();
+        }, 60000);
+    });
+</script>
+{% endblock %}
